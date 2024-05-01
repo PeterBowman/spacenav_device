@@ -9,14 +9,9 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(yarp_control_msgs REQUIRED)
-find_package(orocos_kdl REQUIRED)
 
 add_executable(spacenav_device src/spacenav_device.cpp)
-ament_target_dependencies(spacenav_device rclcpp geometry_msgs sensor_msgs yarp_control_msgs orocos_kdl)
-target_link_libraries(spacenav_device ${orocos_kdl_LIBRARIES})
-target_include_directories(spacenav_device PUBLIC ${orocos_kdl_INCLUDE_DIRS})
+ament_target_dependencies(spacenav_device rclcpp geometry_msgs)
 
 install(TARGETS
   spacenav_device

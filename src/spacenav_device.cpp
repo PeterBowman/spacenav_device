@@ -17,8 +17,8 @@ class SpacenavSubscriber : public rclcpp::Node
 		: Node("spacenav_device")
 		{
 			subscription_spnav_ = this->create_subscription<geometry_msgs::msg::Twist>("/spacenav/twist", 10, 
-                                                                                        std::bind(&SpacenavSubscriber::topic_callback, 
-                                                                                        this, std::placeholders::_1));
+                                                                                  std::bind(&SpacenavSubscriber::topic_callback, 
+                                                                                  this, std::placeholders::_1));
                                                                                         
 			publisher_spnav_ = this->create_publisher<geometry_msgs::msg::Twist>(DEFAULT_NODE_NAME + std::string("/command/twist"), 10);
 		}

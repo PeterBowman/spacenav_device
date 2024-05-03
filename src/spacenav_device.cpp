@@ -1,8 +1,14 @@
 // -*- mode:C++; tab-width:4; c-basic-offset:4; indent-tabs-mode:nil -*-
 
-#include <rclcpp/rclcpp.hpp>	 
+#include <rclcpp/rlcpp.hpp>	 
 #include <geometry_msgs/msg/twist.hpp>
 #include <geometry_msgs/msg/pose.hpp>
+<<<<<<< Updated upstream
+=======
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include "tf2/LinearMath/Quaternion.h"
+// #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+>>>>>>> Stashed changes
 
 
 constexpr auto DEFAULT_NODE_NAME = "/cartesian_control_server_ros2";
@@ -15,16 +21,32 @@ class SpacenavSubscriber : public rclcpp::Node
 		: Node("spacenav_device")
 		{
 			last_update_time_ = now(); // Initialize last update time
+<<<<<<< Updated upstream
 			
 			// Subscriber
+=======
+
+			// Obtain parameters
+			this->declare_parameter<std::string>("msgs_type", "twist"); // default value is "twist"
+        	this->get_parameter("msgs_type", msgs_type);   
+			
+			// Subscribers
+>>>>>>> Stashed changes
 			subscription_spnav_ = this->create_subscription<geometry_msgs::msg::Twist>("/spacenav/twist", 10, 
-                                                                                        std::bind(&SpacenavSubscriber::topic_callback, 
+                                                                                        std::bind(&SpacenavSubscriber::spnav_callback, 
                                                                                         this, std::placeholders::_1));
 
+<<<<<<< Updated upstream
 			// Obtain parameters
 			this->declare_parameter<std::string>("msgs_type", "twist"); // default value is "twist"
         	this->get_parameter("msgs_type", msgs_type);                                                                            
 			
+=======
+			subscription_state_pose = this->create_subscription<geometry_msgs::msg::PoseStamped>(DEFAULT_NODE_NAME + std::string("/state/pose"), 10, 
+																						std::bind(&SpacenavSubscriber::state_callback, 
+																						this, std::placeholders::_1));
+
+>>>>>>> Stashed changes
 			// Publisher
 			if (msgs_type == "twist")
 			{
@@ -35,7 +57,11 @@ class SpacenavSubscriber : public rclcpp::Node
 			{
 				publisher_spnav_pose = this->create_publisher<geometry_msgs::msg::Pose>(DEFAULT_NODE_NAME + std::string("/command/pose"), 10);
 			} 
+<<<<<<< Updated upstream
 			
+=======
+
+>>>>>>> Stashed changes
 			else
 			{
 				RCLCPP_ERROR(this->get_logger(), "Invalid message type. Using 'twist' by fefault.");
@@ -46,7 +72,11 @@ class SpacenavSubscriber : public rclcpp::Node
 		}
 
 	private:
+<<<<<<< Updated upstream
 		void topic_callback(const geometry_msgs::msg::Twist::SharedPtr msg) 
+=======
+		void spnav_callback(const geometry_msgs::msg::Twist::SharedPtr msg) 
+>>>>>>> Stashed changes
 		{
 			if (msgs_type == "twist")
 			{
@@ -65,7 +95,11 @@ class SpacenavSubscriber : public rclcpp::Node
 					v[i] *= SCALE; //mejorar la sensibilidad del desplazamiento
 				}
 
+<<<<<<< Updated upstream
 				RCLCPP_INFO(this->get_logger(), "spnav: [%f %f %f] [%f %f %f]", v[0], v[1], v[2], v[3], v[4], v[5]);
+=======
+				RCLCPP_INFO(this->get_logger(), "Spnav Twist: [%f %f %f] [%f %f %f]", v[0], v[1], v[2], v[3], v[4], v[5]);
+>>>>>>> Stashed changes
 				
 				auto msg_scaled = std::make_shared<geometry_msgs::msg::Twist>();
 
@@ -83,6 +117,7 @@ class SpacenavSubscriber : public rclcpp::Node
 			else if (msgs_type == "pose")
 			{
 				auto current_time = now();
+<<<<<<< Updated upstream
 				auto dt = (current_time - last_update_time_).seconds(); // Get elapsed time since last update
 				last_update_time_ = current_time;
 
@@ -95,19 +130,68 @@ class SpacenavSubscriber : public rclcpp::Node
 				msg_pose->orientation.x += msg->angular.x * dt;
 				msg_pose->orientation.y += msg->angular.y * dt;
 				msg_pose->orientation.z += msg->angular.z * dt;
+=======
+				auto dt = (current_time - last_update_time_).seconds(); // Get elapsed time since last update from sensor input
+				last_update_time_ = current_time;
+
+				std::vector<double> msg_traslation;
+
+				// Transform linear and angular velocities into traslations
+				msg_traslation = {msg->linear.x * dt, msg->linear.y * dt, msg->linear.z * dt, 
+								  msg->angular.x * dt, msg->angular.y * dt, msg->angular.z * dt};
+
+				// Update current state adding traslation
+				for(int i = 0; i < 6; i++)
+				{
+					current_state[i] += msg_traslation[i];
+				}
+
+				auto msg_pose = std::make_shared<geometry_msgs::msg::Pose>();
+
+				msg_pose->position.x = current_state[0];
+				msg_pose->position.y = current_state[1];
+				msg_pose->position.z = current_state[2];
+				msg_pose->orientation.x = current_state[3];
+				msg_pose->orientation.y = current_state[4];
+				msg_pose->orientation.z = current_state[5];
+				//msg_pose->orientation.w = 1.0;
+
+				//RCLCPP_INFO(this->get_logger(), "Spnav Pose: [%f %f %f] [%f %f %f]", msg_pose->position.x, msg_pose->position.y, msg_pose->position.z, 
+				//								 msg_pose->orientation.x, msg_pose->orientation.y, msg_pose->orientation.z, msg_pose->orientation.w);
+>>>>>>> Stashed changes
 
 				publisher_spnav_pose->publish(*msg_pose);
 			}	
 		}
 
+
+		void state_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) 
+		{
+			// RECIBIMOS QUATERNIOS!!!
+
+			// Get current state in traslation and orientation aroun axis x, y, z
+			current_state = {msg->pose.position.x, msg->pose.position.y, msg->pose.position.z, 
+							 msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z};
+		
+		}	
+
+
 		rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription_spnav_;
+<<<<<<< Updated upstream
+=======
+		rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscription_state_pose;
+>>>>>>> Stashed changes
 		rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_spnav_twist;
 		rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_spnav_pose;
 		rclcpp::Time last_update_time_;
 		std::string msgs_type;
+<<<<<<< Updated upstream
+=======
+		std::vector<double> current_state;
+>>>>>>> Stashed changes
 };
 
-
+// -----------------------------------------------------------------------------
 
 int main(int argc, char * argv[])
 {

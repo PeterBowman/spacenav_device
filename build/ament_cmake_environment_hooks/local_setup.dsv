@@ -1,0 +1,2 @@
+source;share/spacenav_device/environment/ament_prefix_path.sh
+source;share/spacenav_device/environment/path.sh

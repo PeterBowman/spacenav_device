@@ -47,7 +47,7 @@ class SpacenavSubscriber : public rclcpp::Node
 
 			else
 			{
-				RCLCPP_ERROR(this->get_logger(), "Invalid message type. Using 'twist' by fefault.");
+				RCLCPP_ERROR(this->get_logger(), "Invalid message type. Using 'twist' by default.");
 				msgs_type_ = "twist";
 				publisher_spnav_twist_ = this->create_publisher<geometry_msgs::msg::Twist>(DEFAULT_NODE_NAME + std::string("/command/twist"), 10);
 			}

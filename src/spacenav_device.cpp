@@ -101,10 +101,10 @@ class SpacenavSubscriber : public rclcpp::Node
 					return;
 				}
 
-				// Transform linear and angular velocities into space traslations				
+				// Transform linear and angular velocities into space traslations (de = v*dt)			
 				std::vector<double> msg_traslation;
 
-				for (int j=0; j<5; j++)
+				for (int j=0; j<6; j++)
 				{
 					msg_traslation.push_back(v[j] * dt);
 				}

@@ -11,7 +11,7 @@
 
 
 constexpr auto DEFAULT_NODE_NAME = "/cartesian_control_server_ros2";
-constexpr auto SCALE = 0.3; 
+constexpr auto SCALE = 0.3; //0.3 for twist
 
 class SpacenavSubscriber : public rclcpp::Node
 {   
@@ -22,8 +22,17 @@ class SpacenavSubscriber : public rclcpp::Node
 			last_update_time_ = now(); // Initialize last update time
 
 			// Obtain parameters
-			this->declare_parameter<std::string>("msgs_type", "twist"); // default value is "twist"
-        	this->get_parameter("msgs_type", msgs_type_);   
+			rcl_interfaces::msg::ParameterDescriptor descriptor;
+			descriptor.name = "streaming_msg";
+			descriptor.description = "Streaming command msg type to be used by the device.";
+			descriptor.read_only = false;
+			descriptor.additional_constraints = "Only 'twist' or 'pose' are allowed.";
+			descriptor.set__type(rcl_interfaces::msg::ParameterType::PARAMETER_STRING);
+			
+			this->declare_parameter<std::string>("streaming_msg", "twist"); // "twist" msgs by default
+        	this->get_parameter("streaming_msg", streaming_msg);
+
+			callback_handle_ = this->add_on_set_parameters_callback(std::bind(&SpacenavSubscriber::parameter_callback, this, std::placeholders::_1));
 			
 			// Subscribers
 			subscription_spnav_ = this->create_subscription<geometry_msgs::msg::Twist>("/spacenav/twist", 10, 
@@ -33,25 +42,23 @@ class SpacenavSubscriber : public rclcpp::Node
 			subscription_state_pose_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(DEFAULT_NODE_NAME + std::string("/state/pose"), 10, 
 																						std::bind(&SpacenavSubscriber::state_callback, 
 																						this, std::placeholders::_1));
-
+			
 			// Publisher
-			if (msgs_type_ == "twist")
+			if (streaming_msg == "twist")
 			{
 				publisher_spnav_twist_ = this->create_publisher<geometry_msgs::msg::Twist>(DEFAULT_NODE_NAME + std::string("/command/twist"), 10);
 			} 
 
-			else if (msgs_type_ == "pose")
+			else if (streaming_msg == "pose")
 			{
 				publisher_spnav_pose_ = this->create_publisher<geometry_msgs::msg::Pose>(DEFAULT_NODE_NAME + std::string("/command/pose"), 10);
 			} 
-
 			else
 			{
 				RCLCPP_ERROR(this->get_logger(), "Invalid message type. Using 'twist' by default.");
-				msgs_type_ = "twist";
+				streaming_msg = "twist";
 				publisher_spnav_twist_ = this->create_publisher<geometry_msgs::msg::Twist>(DEFAULT_NODE_NAME + std::string("/command/twist"), 10);
 			}
-
 		}
 
 	private:
@@ -81,7 +88,7 @@ class SpacenavSubscriber : public rclcpp::Node
 			msg_scaled->angular.y = v[4];
 			msg_scaled->angular.z = v[5];
 
-			if (msgs_type_ == "twist")
+			if (streaming_msg == "twist")
 			{
 				RCLCPP_INFO(this->get_logger(), "Spnav Twist: [%f %f %f] [%f %f %f]", v[0], v[1], v[2], v[3], v[4], v[5]);
 
@@ -89,7 +96,7 @@ class SpacenavSubscriber : public rclcpp::Node
 				
 			} 
 			
-			else if (msgs_type_ == "pose")
+			else if (streaming_msg == "pose")
 			{
 				auto current_time = now();
 				auto dt = (current_time - last_update_time_).seconds(); // Get elapsed time since last update from sensor input
@@ -149,11 +156,52 @@ class SpacenavSubscriber : public rclcpp::Node
 		rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscription_state_pose_;
 		rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_spnav_twist_;
 		rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_spnav_pose_;
+		rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr callback_handle_;
+
+		std::string streaming_msg;
+
 		rclcpp::Time last_update_time_;
-		std::string msgs_type_;
 		tf2::Vector3 initial_position_;
 		tf2::Quaternion initial_orientation_;
 		bool initial_pose_set_;
+
+
+		// Callback for parameter changes
+
+		rcl_interfaces::msg::SetParametersResult parameter_callback(const std::vector<rclcpp::Parameter> &parameters)
+		{
+			rcl_interfaces::msg::SetParametersResult result;
+			result.successful = true;
+			for (const auto &param: parameters)
+			{
+				if(param.get_name() == "streaming_msg")  
+				{
+					streaming_msg = param.value_to_string();
+
+					if (streaming_msg == "twist")
+					{
+						RCLCPP_INFO(this->get_logger(), "Param for streaming_msg correctly stablished: %s", streaming_msg.c_str());
+						publisher_spnav_twist_ = this->create_publisher<geometry_msgs::msg::Twist>(DEFAULT_NODE_NAME + std::string("/command/twist"), 10);
+					}
+					else if (streaming_msg == "pose")
+					{
+						RCLCPP_INFO(this->get_logger(),"Param for streaming_msg correctly stablished: %s", streaming_msg.c_str());
+						publisher_spnav_pose_ = this->create_publisher<geometry_msgs::msg::Pose>(DEFAULT_NODE_NAME + std::string("/command/pose"), 10);
+					}
+					else
+					{
+						result.successful = false;
+						streaming_msg = "twist";
+						RCLCPP_ERROR(this->get_logger(),"Invalid parameter for streaming_msg. Only 'twist' or 'pose' are allowed. Using 'twist' by default.");
+						publisher_spnav_twist_ = this->create_publisher<geometry_msgs::msg::Twist>(DEFAULT_NODE_NAME + std::string("/command/twist"), 10);
+					}
+				}
+			}
+			return result;
+		}	
+
+
+
 };
 
 // -----------------------------------------------------------------------------

@@ -207,8 +207,6 @@ class SpacenavSubscriber : public rclcpp::Node
 		rclcpp::Time last_update_time_;
 		tf2::Vector3 initial_position_;
 		tf2::Quaternion initial_orientation_;
-		// std::vector<double> initial_pose_;
-		//std::vector<double> final_pose_;
 		bool initial_pose_set_;
 
 		roboticslab::ICartesianControl * iCartesianControl_;

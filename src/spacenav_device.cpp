@@ -9,9 +9,11 @@
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
+#include <ICartesianControl.h>
+
 
 constexpr auto DEFAULT_NODE_NAME = "/cartesian_control_server_ros2";
-constexpr auto SCALE = 0.3; //0.3 for twist
+constexpr auto SCALE = 0.5;
 
 class SpacenavSubscriber : public rclcpp::Node
 {   
@@ -47,17 +49,20 @@ class SpacenavSubscriber : public rclcpp::Node
 			if (streaming_msg == "twist")
 			{
 				publisher_spnav_twist_ = this->create_publisher<geometry_msgs::msg::Twist>(DEFAULT_NODE_NAME + std::string("/command/twist"), 10);
+
 			} 
 
 			else if (streaming_msg == "pose")
 			{
 				publisher_spnav_pose_ = this->create_publisher<geometry_msgs::msg::Pose>(DEFAULT_NODE_NAME + std::string("/command/pose"), 10);
+
 			} 
 			else
 			{
 				RCLCPP_ERROR(this->get_logger(), "Invalid message type. Using 'twist' by default.");
 				streaming_msg = "twist";
 				publisher_spnav_twist_ = this->create_publisher<geometry_msgs::msg::Twist>(DEFAULT_NODE_NAME + std::string("/command/twist"), 10);
+
 			}
 		}
 
@@ -93,7 +98,7 @@ class SpacenavSubscriber : public rclcpp::Node
 				RCLCPP_INFO(this->get_logger(), "Spnav Twist: [%f %f %f] [%f %f %f]", v[0], v[1], v[2], v[3], v[4], v[5]);
 
 				publisher_spnav_twist_->publish(*msg_scaled);
-				
+	
 			} 
 			
 			else if (streaming_msg == "pose")
@@ -116,7 +121,7 @@ class SpacenavSubscriber : public rclcpp::Node
 					msg_traslation.push_back(v[j] * dt);
 				}
 
-				// Create new quaternion for Pose applying angular rotation
+				//Create new quaternion for Pose applying angular rotation
 				tf2::Quaternion q;
 				q.setRPY(msg_traslation[3], msg_traslation[4], msg_traslation[5]);
 				tf2::Quaternion new_orientation	= initial_orientation_ * q;
@@ -135,6 +140,7 @@ class SpacenavSubscriber : public rclcpp::Node
 				msg_pose->position.z = new_position.z();
 				msg_pose->orientation = tf2::toMsg(new_orientation);
 
+
 				RCLCPP_INFO(this->get_logger(), "Spnav Pose: [%f %f %f] [%f %f %f %f]", msg_pose->position.x, msg_pose->position.y, msg_pose->position.z, 
 												 msg_pose->orientation.x, msg_pose->orientation.y, msg_pose->orientation.z, msg_pose->orientation.w);
 
@@ -145,25 +151,12 @@ class SpacenavSubscriber : public rclcpp::Node
 
 		void state_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) 
 		{
-			// Get current state in traslation and orientation aroun axis x, y, z
+			//Get current state in traslation and orientation aroun axis x, y, z (quaternions)
 			tf2::fromMsg(msg->pose.position, initial_position_);
-			tf2::fromMsg(msg->pose.orientation, initial_orientation_);		
+			tf2::fromMsg(msg->pose.orientation, initial_orientation_);
+				
 			initial_pose_set_ = true;	 
 		}	
-
-
-		rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription_spnav_;
-		rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscription_state_pose_;
-		rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_spnav_twist_;
-		rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_spnav_pose_;
-		rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr callback_handle_;
-
-		std::string streaming_msg;
-
-		rclcpp::Time last_update_time_;
-		tf2::Vector3 initial_position_;
-		tf2::Quaternion initial_orientation_;
-		bool initial_pose_set_;
 
 
 		// Callback for parameter changes
@@ -181,11 +174,13 @@ class SpacenavSubscriber : public rclcpp::Node
 					if (streaming_msg == "twist")
 					{
 						RCLCPP_INFO(this->get_logger(), "Param for streaming_msg correctly stablished: %s", streaming_msg.c_str());
+
 						publisher_spnav_twist_ = this->create_publisher<geometry_msgs::msg::Twist>(DEFAULT_NODE_NAME + std::string("/command/twist"), 10);
 					}
 					else if (streaming_msg == "pose")
 					{
 						RCLCPP_INFO(this->get_logger(),"Param for streaming_msg correctly stablished: %s", streaming_msg.c_str());
+
 						publisher_spnav_pose_ = this->create_publisher<geometry_msgs::msg::Pose>(DEFAULT_NODE_NAME + std::string("/command/pose"), 10);
 					}
 					else
@@ -194,13 +189,29 @@ class SpacenavSubscriber : public rclcpp::Node
 						streaming_msg = "twist";
 						RCLCPP_ERROR(this->get_logger(),"Invalid parameter for streaming_msg. Only 'twist' or 'pose' are allowed. Using 'twist' by default.");
 						publisher_spnav_twist_ = this->create_publisher<geometry_msgs::msg::Twist>(DEFAULT_NODE_NAME + std::string("/command/twist"), 10);
+
 					}
 				}
 			}
 			return result;
 		}	
 
+		rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription_spnav_;
+		rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscription_state_pose_;
+		rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_spnav_twist_;
+		rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_spnav_pose_;
+		rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr callback_handle_;
 
+		std::string streaming_msg;
+
+		rclcpp::Time last_update_time_;
+		tf2::Vector3 initial_position_;
+		tf2::Quaternion initial_orientation_;
+		// std::vector<double> initial_pose_;
+		//std::vector<double> final_pose_;
+		bool initial_pose_set_;
+
+		roboticslab::ICartesianControl * iCartesianControl_;
 
 };
 

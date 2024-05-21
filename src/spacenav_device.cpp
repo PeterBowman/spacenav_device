@@ -9,11 +9,6 @@
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
-<<<<<<< Updated upstream
-
-constexpr auto DEFAULT_NODE_NAME = "/cartesian_control_server_ros2";
-constexpr auto SCALE = 0.3; //0.3 for twist
-=======
 #include <kdl/frames.hpp>
 
 #include <ICartesianControl.h>
@@ -29,7 +24,6 @@ const auto SCALE = 0.5;
 using SetParameters = rcl_interfaces::srv::SetParameters;
 using Parameter = rcl_interfaces::msg::Parameter;
 using ParameterValue = rcl_interfaces::msg::ParameterValue;
->>>>>>> Stashed changes
 
 class SpacenavSubscriber : public rclcpp::Node
 {   
@@ -125,15 +119,8 @@ class SpacenavSubscriber : public rclcpp::Node
 
 			if (streaming_msg == "twist")
 			{
-<<<<<<< Updated upstream
-				RCLCPP_INFO(this->get_logger(), "Spnav Twist: [%f %f %f] [%f %f %f]", v[0], v[1], v[2], v[3], v[4], v[5]);
-
-				publisher_spnav_twist_->publish(*msg_scaled);
-				
-=======
 				std::lock_guard<std::mutex> lock(msg_mutex_);
 		        last_msg_ = msg_scaled;
->>>>>>> Stashed changes
 			} 
 			
 			else if (streaming_msg == "pose")
@@ -165,8 +152,6 @@ class SpacenavSubscriber : public rclcpp::Node
 					msg_traslation.push_back(v[j] * dt);
 				}
 
-<<<<<<< Updated upstream
-=======
 				/******************************************************************************************************/
 				// auto rotation = KDL::Vector (msg_traslation[3], msg_traslation[4], msg_traslation[5]);
 				// auto ori = KDL::Rotation::Rot(rotation, rotation.Norm());
@@ -176,7 +161,6 @@ class SpacenavSubscriber : public rclcpp::Node
 				// KDL::Vector new_position = current_position_ + new_orientation * traslation;
 				/******************************************************************************************************/
 
->>>>>>> Stashed changes
 				// Create new quaternion for Pose applying angular rotation
 				tf2::Quaternion q;
 				//auto rot = tf2::Vector3(msg_traslation[3], msg_traslation[4], msg_traslation[5]);
@@ -201,8 +185,6 @@ class SpacenavSubscriber : public rclcpp::Node
 				msg_pose->position.z = new_position.z();
 				msg_pose->orientation = tf2::toMsg(new_orientation);
 
-<<<<<<< Updated upstream
-=======
 				// double qx, qy, qz, qw;
 				// new_orientation.GetQuaternion(qx, qy, qz, qw);
 				// msg_pose->orientation.x = qx;
@@ -210,7 +192,6 @@ class SpacenavSubscriber : public rclcpp::Node
 				// msg_pose->orientation.z = qz;
 				// msg_pose->orientation.w = qw;
 
->>>>>>> Stashed changes
 				RCLCPP_INFO(this->get_logger(), "Spnav Pose: [%f %f %f] [%f %f %f %f]", msg_pose->position.x, msg_pose->position.y, msg_pose->position.z, 
 												 msg_pose->orientation.x, msg_pose->orientation.y, msg_pose->orientation.z, msg_pose->orientation.w);
 
@@ -222,12 +203,6 @@ class SpacenavSubscriber : public rclcpp::Node
 
 		void state_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) 
 		{
-<<<<<<< Updated upstream
-			// Get current state in traslation and orientation aroun axis x, y, z
-			tf2::fromMsg(msg->pose.position, initial_position_);
-			tf2::fromMsg(msg->pose.orientation, initial_orientation_);		
-			initial_pose_set_ = true;	 
-=======
 			if(!initial_pose_set_)
 			{
 				tf2::fromMsg(msg->pose.position, initial_position_);
@@ -236,7 +211,6 @@ class SpacenavSubscriber : public rclcpp::Node
 				// initial_orientation_ = KDL::Rotation::Quaternion(msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z, msg->pose.orientation.w);
 				initial_pose_set_ = true;
 			}	
->>>>>>> Stashed changes
 		}	
 
 		// Set external node parameter
@@ -325,9 +299,6 @@ class SpacenavSubscriber : public rclcpp::Node
 			return result;
 		}	
 
-<<<<<<< Updated upstream
-
-=======
 
 		void timer_callback()
 		{
@@ -374,7 +345,6 @@ class SpacenavSubscriber : public rclcpp::Node
 		// KDL::Rotation current_orientation_;
 
 		roboticslab::ICartesianControl * iCartesianControl_;
->>>>>>> Stashed changes
 
 };
 

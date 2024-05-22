@@ -281,6 +281,7 @@ class SpacenavSubscriber : public rclcpp::Node
 					std::lock_guard<std::mutex> lock(msg_mutex_);
 					msg_to_publish = last_msg_;
 				}
+				
 				bool zero_msg = (msg_to_publish->linear.x == 0.0 && msg_to_publish->linear.y == 0.0 && msg_to_publish->linear.z == 0.0 && 
 								msg_to_publish->angular.x == 0.0 && msg_to_publish->angular.y == 0.0 && msg_to_publish->angular.z == 0.0);	
 

@@ -167,20 +167,23 @@ class SpacenavSubscriber : public rclcpp::Node
 
 				tf2::Vector3 new_position = current_position_ + traslation;
 
-				current_position_ = new_position;
-				current_orientation_ = new_orientation;
+				if(new_position!=current_position_ || new_orientation!=current_orientation_) //Only publish if there is a change
+				{
+					current_position_ = new_position;
+					current_orientation_ = new_orientation;
 
-				auto msg_pose = std::make_shared<geometry_msgs::msg::Pose>();
+					auto msg_pose = std::make_shared<geometry_msgs::msg::Pose>();
 
-				msg_pose->position.x = new_position.x();
-				msg_pose->position.y = new_position.y();
-				msg_pose->position.z = new_position.z();
-				msg_pose->orientation = tf2::toMsg(new_orientation);
+					msg_pose->position.x = new_position.x();
+					msg_pose->position.y = new_position.y();
+					msg_pose->position.z = new_position.z();
+					msg_pose->orientation = tf2::toMsg(new_orientation);
 
-				RCLCPP_INFO(this->get_logger(), "Spnav Pose: [%f %f %f] [%f %f %f %f]", msg_pose->position.x, msg_pose->position.y, msg_pose->position.z, 
-												 msg_pose->orientation.x, msg_pose->orientation.y, msg_pose->orientation.z, msg_pose->orientation.w);
+					RCLCPP_INFO(this->get_logger(), "Spnav Pose: [%f %f %f] [%f %f %f %f]", msg_pose->position.x, msg_pose->position.y, msg_pose->position.z, 
+													msg_pose->orientation.x, msg_pose->orientation.y, msg_pose->orientation.z, msg_pose->orientation.w);
 
-				publisher_spnav_pose_->publish(*msg_pose);
+					publisher_spnav_pose_->publish(*msg_pose);
+				}
 			}	
 		}
 

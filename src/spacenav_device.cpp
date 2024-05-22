@@ -44,6 +44,7 @@ class SpacenavSubscriber : public rclcpp::Node
 			this->declare_parameter<std::string>("streaming_msg", "twist", descriptor); // "twist" msgs by default
         	this->get_parameter("streaming_msg", streaming_msg);
 
+			// Callback for parameter changes
 			callback_handle_ = this->add_on_set_parameters_callback(std::bind(&SpacenavSubscriber::parameter_callback, this, std::placeholders::_1));
 			
 			// Set parameters for external node
@@ -270,20 +271,23 @@ class SpacenavSubscriber : public rclcpp::Node
 
 		void timer_callback()
 		{
-			geometry_msgs::msg::Twist::SharedPtr msg_to_publish;
+			if (streaming_msg == "twist")
 			{
-				std::lock_guard<std::mutex> lock(msg_mutex_);
-				msg_to_publish = last_msg_;
-			}
-			bool zero_msg = (msg_to_publish->linear.x == 0.0 && msg_to_publish->linear.y == 0.0 && msg_to_publish->linear.z == 0.0 && 
-							msg_to_publish->angular.x == 0.0 && msg_to_publish->angular.y == 0.0 && msg_to_publish->angular.z == 0.0);	
+				geometry_msgs::msg::Twist::SharedPtr msg_to_publish;
+				{
+					std::lock_guard<std::mutex> lock(msg_mutex_);
+					msg_to_publish = last_msg_;
+				}
+				bool zero_msg = (msg_to_publish->linear.x == 0.0 && msg_to_publish->linear.y == 0.0 && msg_to_publish->linear.z == 0.0 && 
+								msg_to_publish->angular.x == 0.0 && msg_to_publish->angular.y == 0.0 && msg_to_publish->angular.z == 0.0);	
 
-			if (msg_to_publish && streaming_msg == "twist" && !zero_msg)
-			{
-				RCLCPP_INFO(this->get_logger(), "Spnav Twist: [%f %f %f] [%f %f %f]", msg_to_publish->linear.x, msg_to_publish->linear.y, msg_to_publish->linear.z, 
-												 msg_to_publish->angular.x, msg_to_publish->angular.y, msg_to_publish->angular.z);
-												 
-				publisher_spnav_twist_->publish(*msg_to_publish);
+				if (msg_to_publish && !zero_msg)
+				{
+					RCLCPP_INFO(this->get_logger(), "Spnav Twist: [%f %f %f] [%f %f %f]", msg_to_publish->linear.x, msg_to_publish->linear.y, msg_to_publish->linear.z, 
+													msg_to_publish->angular.x, msg_to_publish->angular.y, msg_to_publish->angular.z);
+													
+					publisher_spnav_twist_->publish(*msg_to_publish);
+				}
 			}
 		}	
 

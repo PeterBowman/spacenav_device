@@ -69,9 +69,8 @@ class SpacenavSubscriber : public rclcpp::Node
 																						this, std::placeholders::_1));
 			
 			// Timer
-			timer_ = this->create_wall_timer(std::chrono::milliseconds(50), std::bind(&SpacenavSubscriber::timer_callback, this));
+			timer_ = this->create_wall_timer(std::chrono::milliseconds(20), std::bind(&SpacenavSubscriber::timer_callback, this));
 			
-
 			// Publisher
 			if (streaming_msg == "twist")
 			{
@@ -276,8 +275,10 @@ class SpacenavSubscriber : public rclcpp::Node
 				std::lock_guard<std::mutex> lock(msg_mutex_);
 				msg_to_publish = last_msg_;
 			}
-			
-			if (msg_to_publish && streaming_msg == "twist")
+			bool zero_msg = (msg_to_publish->linear.x == 0.0 && msg_to_publish->linear.y == 0.0 && msg_to_publish->linear.z == 0.0 && 
+							msg_to_publish->angular.x == 0.0 && msg_to_publish->angular.y == 0.0 && msg_to_publish->angular.z == 0.0);	
+
+			if (msg_to_publish && streaming_msg == "twist" && !zero_msg)
 			{
 				RCLCPP_INFO(this->get_logger(), "Spnav Twist: [%f %f %f] [%f %f %f]", msg_to_publish->linear.x, msg_to_publish->linear.y, msg_to_publish->linear.z, 
 												 msg_to_publish->angular.x, msg_to_publish->angular.y, msg_to_publish->angular.z);

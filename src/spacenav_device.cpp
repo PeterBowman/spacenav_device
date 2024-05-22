@@ -19,7 +19,7 @@
 
 
 const auto DEFAULT_NODE_NAME = "/cartesian_control_server_ros2";
-const auto SCALE = 0.5;
+const auto SCALE = 0.3;
 
 using SetParameters = rcl_interfaces::srv::SetParameters;
 using Parameter = rcl_interfaces::msg::Parameter;
@@ -117,6 +117,7 @@ class SpacenavSubscriber : public rclcpp::Node
 			msg_scaled->angular.y = v[4];
 			msg_scaled->angular.z = v[5];
 
+			// Publish message
 			if (streaming_msg == "twist")
 			{
 				std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -152,19 +153,10 @@ class SpacenavSubscriber : public rclcpp::Node
 					msg_traslation.push_back(v[j] * dt);
 				}
 
-				/******************************************************************************************************/
-				// auto rotation = KDL::Vector (msg_traslation[3], msg_traslation[4], msg_traslation[5]);
-				// auto ori = KDL::Rotation::Rot(rotation, rotation.Norm());
-				// KDL::Rotation new_orientation = current_orientation_ * ori;
-
-				// auto traslation = KDL::Vector(msg_traslation[0], msg_traslation[1], msg_traslation[2]);
-				// KDL::Vector new_position = current_position_ + new_orientation * traslation;
-				/******************************************************************************************************/
-
 				// Create new quaternion for Pose applying angular rotation
 				tf2::Quaternion q;
 				//auto rot = tf2::Vector3(msg_traslation[3], msg_traslation[4], msg_traslation[5]);
-				//q.setRotation(rot, rot.length());
+				//q.setRotation(rot, rot.length()); 
 				q.setRPY(msg_traslation[3], msg_traslation[4], msg_traslation[5]);
 				tf2::Quaternion new_orientation	= current_orientation_ * q;
 				new_orientation.normalize(); // Normalize new quaternion
@@ -185,13 +177,6 @@ class SpacenavSubscriber : public rclcpp::Node
 				msg_pose->position.z = new_position.z();
 				msg_pose->orientation = tf2::toMsg(new_orientation);
 
-				// double qx, qy, qz, qw;
-				// new_orientation.GetQuaternion(qx, qy, qz, qw);
-				// msg_pose->orientation.x = qx;
-				// msg_pose->orientation.y = qy;
-				// msg_pose->orientation.z = qz;
-				// msg_pose->orientation.w = qw;
-
 				RCLCPP_INFO(this->get_logger(), "Spnav Pose: [%f %f %f] [%f %f %f %f]", msg_pose->position.x, msg_pose->position.y, msg_pose->position.z, 
 												 msg_pose->orientation.x, msg_pose->orientation.y, msg_pose->orientation.z, msg_pose->orientation.w);
 
@@ -207,8 +192,6 @@ class SpacenavSubscriber : public rclcpp::Node
 			{
 				tf2::fromMsg(msg->pose.position, initial_position_);
 				tf2::fromMsg(msg->pose.orientation, initial_orientation_);
-				// initial_position_ = KDL::Vector(msg->pose.position.x, msg->pose.position.y, msg->pose.position.z);
-				// initial_orientation_ = KDL::Rotation::Quaternion(msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z, msg->pose.orientation.w);
 				initial_pose_set_ = true;
 			}	
 		}	
@@ -244,20 +227,6 @@ class SpacenavSubscriber : public rclcpp::Node
         	auto result = client_param_->async_send_request(request, response_received_callback);
 		
     	}
-
-
-		rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription_spnav_;
-		rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscription_state_pose_;
-		rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_spnav_twist_;
-		rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_spnav_pose_;
-		rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr callback_handle_;
-
-		std::string streaming_msg;
-
-		rclcpp::Time last_update_time_;
-		tf2::Vector3 initial_position_;
-		tf2::Quaternion initial_orientation_;
-		bool initial_pose_set_;
 
 
 		// Callback for parameter changes
@@ -308,7 +277,7 @@ class SpacenavSubscriber : public rclcpp::Node
 				msg_to_publish = last_msg_;
 			}
 			
-			if (msg_to_publish)
+			if (msg_to_publish && streaming_msg == "twist")
 			{
 				RCLCPP_INFO(this->get_logger(), "Spnav Twist: [%f %f %f] [%f %f %f]", msg_to_publish->linear.x, msg_to_publish->linear.y, msg_to_publish->linear.z, 
 												 msg_to_publish->angular.x, msg_to_publish->angular.y, msg_to_publish->angular.z);
@@ -339,10 +308,6 @@ class SpacenavSubscriber : public rclcpp::Node
 		tf2::Quaternion current_orientation_;
 		bool initial_pose_set_;
 		bool virtual_pose_set;
-		// KDL::Vector initial_position_;
-    	// KDL::Rotation initial_orientation_;
-		// KDL::Vector current_position_;
-		// KDL::Rotation current_orientation_;
 
 		roboticslab::ICartesianControl * iCartesianControl_;
 

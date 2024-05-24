@@ -29,7 +29,7 @@ class SpacenavSubscriber : public rclcpp::Node
 {   
 	public:
 		SpacenavSubscriber() 
-		: Node("spacenav_device")
+			: Node("spacenav_device") 
 		{
 			last_update_time_ = now(); // Initialize last update time
 
@@ -253,7 +253,7 @@ class SpacenavSubscriber : public rclcpp::Node
 					}
 					else if (streaming_msg == "pose")
 					{
-						set_preset_streaming_cmd("movi");
+						set_preset_streaming_cmd("pose");
 
 						RCLCPP_INFO(this->get_logger(),"Param for streaming_msg correctly stablished: %s", streaming_msg.c_str());
 						publisher_spnav_pose_ = this->create_publisher<geometry_msgs::msg::Pose>(DEFAULT_NODE_NAME + std::string("/command/pose"), 10);
@@ -283,14 +283,18 @@ class SpacenavSubscriber : public rclcpp::Node
 				}
 				
 				bool zero_msg = (msg_to_publish->linear.x == 0.0 && msg_to_publish->linear.y == 0.0 && msg_to_publish->linear.z == 0.0 && 
-								msg_to_publish->angular.x == 0.0 && msg_to_publish->angular.y == 0.0 && msg_to_publish->angular.z == 0.0);	
+								msg_to_publish->angular.x == 0.0 && msg_to_publish->angular.y == 0.0 && msg_to_publish->angular.z == 0.0);
+									
 
-				if (msg_to_publish && !zero_msg)
-				{
-					RCLCPP_INFO(this->get_logger(), "Spnav Twist: [%f %f %f] [%f %f %f]", msg_to_publish->linear.x, msg_to_publish->linear.y, msg_to_publish->linear.z, 
-													msg_to_publish->angular.x, msg_to_publish->angular.y, msg_to_publish->angular.z);
-													
+				if (msg_to_publish) 
+				{									
 					publisher_spnav_twist_->publish(*msg_to_publish);
+
+					if(!zero_msg)
+					{
+						RCLCPP_INFO(this->get_logger(), "Spnav Twist: [%f %f %f] [%f %f %f]", msg_to_publish->linear.x, msg_to_publish->linear.y, msg_to_publish->linear.z, 
+										  				msg_to_publish->angular.x, msg_to_publish->angular.y, msg_to_publish->angular.z);
+					}
 				}
 			}
 		}	
@@ -311,6 +315,7 @@ class SpacenavSubscriber : public rclcpp::Node
 		std::string streaming_msg;
 
 		rclcpp::Time last_update_time_;
+
 		tf2::Vector3 initial_position_;
 		tf2::Quaternion initial_orientation_;
 		tf2::Vector3 current_position_;

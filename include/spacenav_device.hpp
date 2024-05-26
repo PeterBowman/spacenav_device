@@ -1,7 +1,5 @@
 // -*- mode:C++; tab-width:4; c-basic-offset:4; indent-tabs-mode:nil -*-
 
-// #ifndef __SPACENAV_DEVICE_HPP__
-// #define __SPACENAV_DEVICE_HPP__
 
 #include "rclcpp/rclcpp.hpp"  
 
@@ -39,7 +37,6 @@ private:
     rcl_interfaces::msg::SetParametersResult parameter_callback(const std::vector<rclcpp::Parameter> &parameters);
     void timer_callback();
 
-    // Members
 
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription_spnav_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscription_state_pose_;
@@ -50,8 +47,6 @@ private:
     rclcpp::TimerBase::SharedPtr timer_;
     geometry_msgs::msg::Twist::SharedPtr last_msg_;
     std::mutex msg_mutex_;
-
-
 
     rclcpp::Time last_update_time_;
 
@@ -69,3 +64,4 @@ private:
     std::string frame_;
 
 };
+

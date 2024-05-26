@@ -146,8 +146,6 @@ SpacenavSubscriber::~SpacenavSubscriber()
 
 			// Create new quaternion for Pose applying angular rotation
 			tf2::Quaternion q;
-			//auto rot = tf2::Vector3(msg_traslation[3], msg_traslation[4], msg_traslation[5]);
-			//q.setRotation(rot, rot.length()); 
 			q.setRPY(msg_traslation[3], msg_traslation[4], msg_traslation[5]);
 			tf2::Quaternion new_orientation	= current_orientation_ * q;
 			new_orientation.normalize(); // Normalize new quaternion

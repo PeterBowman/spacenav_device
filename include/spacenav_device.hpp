@@ -4,15 +4,13 @@
 #include "geometry_msgs/msg/twist.hpp"
 #include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/wrench.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2/LinearMath/Vector3.h"
-// #include <kdl/frames.hpp>
 #include <ICartesianControl.h>
 #include <chrono>
 #include <memory>
 #include <mutex>
-
-const auto DEFAULT_NODE_NAME = "/cartesian_control_server_ros2";
 
 using SetParameters = rcl_interfaces::srv::SetParameters;
 using Parameter = rcl_interfaces::msg::Parameter;
@@ -32,31 +30,32 @@ private:
     SetParametersResult parameter_callback(const std::vector<rclcpp::Parameter> &parameters);
     void timer_callback();
 
-
-    rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription_spnav_;
-    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscription_state_pose_;
-    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_spnav_twist_;
-    rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_spnav_pose_;
-    rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr callback_handle_;
-    rclcpp::Client<SetParameters>::SharedPtr client_param_;
-    rclcpp::TimerBase::SharedPtr timer_;
-    geometry_msgs::msg::Twist::SharedPtr last_msg_;
+    rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscription_spnav_{nullptr};
+    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr subscription_state_pose_{nullptr};
+    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_spnav_twist_{nullptr};
+    rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr publisher_spnav_pose_{nullptr};
+    rclcpp::Publisher<geometry_msgs::msg::Wrench>::SharedPtr publisher_spnav_wrench_{nullptr};
+    rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr callback_handle_{nullptr};
+    rclcpp::Client<SetParameters>::SharedPtr client_param_{nullptr};
+    rclcpp::TimerBase::SharedPtr timer_{nullptr};
+    geometry_msgs::msg::Twist::SharedPtr last_msg_{nullptr};
+    geometry_msgs::msg::Pose::SharedPtr last_msg_pose_{nullptr};
+    geometry_msgs::msg::Wrench::SharedPtr last_msg_wrench_{nullptr};
     std::mutex msg_mutex_;
 
-    rclcpp::Time last_update_time_;
+    rclcpp::Time last_update_time_{0};
 
-    tf2::Vector3 initial_position_;
-    tf2::Quaternion initial_orientation_;
-    tf2::Vector3 current_position_;
-    tf2::Quaternion current_orientation_;
+    tf2::Vector3 initial_position_{0, 0, 0};
+    tf2::Quaternion initial_orientation_{0, 0, 0, 1};
+    tf2::Vector3 current_position_{0, 0, 0};
+    tf2::Quaternion current_orientation_{0, 0, 0, 1};
     bool initial_pose_set_{false};
     bool virtual_pose_set{false};
+    bool position_changed_{false};
 
-    roboticslab::ICartesianControl * iCartesianControl_;
+    roboticslab::ICartesianControl * iCartesianControl_{nullptr};
 
-    double scale_; //initializar
-    std::string streaming_msg; //initializar
-    std::string frame_;//initializar
-
+    double scale_{0.3};
+    std::string streaming_msg_{"twist"};
 };
 

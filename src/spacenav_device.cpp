@@ -1,7 +1,15 @@
 // -*- mode:C++; tab-width:4; c-basic-offset:4; indent-tabs-mode:nil -*-
 
 #include "spacenav_device.hpp"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+
+#include <cmath> // std::isfinite
+
+#include <chrono>
+#include <functional> //std::bind
+#include <memory>
+#include <iostream>
+
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 constexpr auto DEFAULT_NODE_NAME = "/cartesian_control_server_ros2";
 constexpr auto DEFAULT_AXIS_SCALE = 0.3;
@@ -45,7 +53,7 @@ using namespace std::placeholders;
 			if (!rclcpp::ok()) 
 			{
 				RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for the service. Exiting.");
-				throw std::runtime_error("Interrupted while waiting for the service. Exiting.");
+				throw std::runtime_error("Interrupted while waiting for the service. Exiting."); //check clases de excepciones!
 				return;
 			}
 
@@ -74,33 +82,41 @@ using namespace std::placeholders;
 		if (streaming_msg_ == "twist" && !set_preset_streaming_cmd("twist"))
 		{
 			RCLCPP_ERROR(this->get_logger(), "Failed to set preset streaming command.");
+			//throw exception
 		}
 
 		else if (streaming_msg_ == "pose" && !set_preset_streaming_cmd("pose"))
 		{
 			RCLCPP_ERROR(this->get_logger(), "Failed to set preset streaming command.");
+			//throw exception
 		}
 		
 		else if (streaming_msg_ == "wrench" && !set_preset_streaming_cmd("wrench"))
 		{
 			RCLCPP_ERROR(this->get_logger(), "Failed to set preset streaming command.");
+			//throw exception
 		}
 
 		else if (streaming_msg_ != "twist" && streaming_msg_ != "pose" && streaming_msg_ != "wrench")
 		{
-			RCLCPP_WARN(this->get_logger(), "No valid streaming message type included. Using 'twist' by default.");
-			streaming_msg_ = DEFAULT_STREAMING_MSG;
-			if(!set_preset_streaming_cmd(DEFAULT_STREAMING_MSG))
-			{
-				RCLCPP_ERROR(this->get_logger(), "Failed to set preset streaming command.");
-			}
+			RCLCPP_WARN(this->get_logger(), "No valid streaming message type included."); //Using 'twist' by default.");
+			// streaming_msg_ = DEFAULT_STREAMING_MSG;
+			// if(!set_preset_streaming_cmd(DEFAULT_STREAMING_MSG))
+			// {
+			// 	RCLCPP_ERROR(this->get_logger(), "Failed to set preset streaming command.");
+			// 	//throw exception
+			// }
+
+			//throw exception!			
 		}
 
 		if (scale_ <= 0)
 		{
 			RCLCPP_WARN(this->get_logger(), "Invalid parameter for scale. Using 0.3 by defeault.");
-			scale_ = 0.3;
-			parameter_callback({rclcpp::Parameter("scale", scale_)});
+			// scale_ = 0.3;
+			// parameter_callback({rclcpp::Parameter("scale", scale_)});
+
+			//throw exception!
 		}
 }
 
@@ -192,7 +208,7 @@ SpacenavSubscriber::~SpacenavSubscriber()
 			
 			tf2::Quaternion new_orientation = current_orientation_ * q;
 			new_orientation.normalize();
-	
+			
 			// Avoid NaN values
 			if (std::isfinite(new_position.x()) && std::isfinite(new_position.y()) && std::isfinite(new_position.z()) &&
 				std::isfinite(new_orientation.x()) && std::isfinite(new_orientation.y()) && std::isfinite(new_orientation.z()) && std::isfinite(new_orientation.w()))
@@ -219,26 +235,18 @@ SpacenavSubscriber::~SpacenavSubscriber()
 		else if(streaming_msg_ == "wrench")
 		{
 			auto msg_wrench = std::make_shared<geometry_msgs::msg::Wrench>();
-			if(msg_wrench)
-			{
-				msg_wrench->force.x = 
-				msg_wrench->force.y = v[1];
-				msg_wrench->force.z = v[2];
-				msg_wrench->torque.x = v[3];
-				msg_wrench->torque.y = v[4];
-				msg_wrench->torque.z = v[5];	
 
-				// Publish message
-				if (msg_wrench)
-				{
-					std::lock_guard<std::mutex> lock(msg_mutex_);
-					last_msg_wrench_ = msg_wrench;
-				}
-			}
-			else
-			{
-				RCLCPP_ERROR(this->get_logger(), "Failed to create Wrench message");	
-			}
+			msg_wrench->force.x = v[0];
+			msg_wrench->force.y = v[1];
+			msg_wrench->force.z = v[2];
+			msg_wrench->torque.x = v[3];
+			msg_wrench->torque.y = v[4];
+			msg_wrench->torque.z = v[5];	
+
+			// Publish message
+
+			std::lock_guard<std::mutex> lock(msg_mutex_);
+			last_msg_wrench_ = msg_wrench;
 		}
 	}
 

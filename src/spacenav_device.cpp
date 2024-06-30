@@ -8,8 +8,10 @@
 #include <functional> //std::bind
 #include <memory>
 #include <iostream>
+#include <stdexcept>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <rclcpp/exceptions.hpp>
 
 constexpr auto DEFAULT_NODE_NAME = "/cartesian_control_server_ros2";
 constexpr auto DEFAULT_AXIS_SCALE = 0.3;
@@ -53,7 +55,7 @@ using namespace std::placeholders;
 			if (!rclcpp::ok()) 
 			{
 				RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for the service. Exiting.");
-				throw std::runtime_error("Interrupted while waiting for the service. Exiting."); //check clases de excepciones!
+				throw std::runtime_error("Interrupted while waiting for the service. Exiting."); 
 				return;
 			}
 
@@ -78,45 +80,30 @@ using namespace std::placeholders;
 		publisher_spnav_pose_ = this->create_publisher<geometry_msgs::msg::Pose>(DEFAULT_NODE_NAME + std::string("/command/pose"), 10);
 		publisher_spnav_wrench_ = this->create_publisher<geometry_msgs::msg::Wrench>(DEFAULT_NODE_NAME + std::string("/command/wrench"), 10);
 		
-		// Parameters validation
+		// Parameters validation with exceptions to avoid runtime errors
 		if (streaming_msg_ == "twist" && !set_preset_streaming_cmd("twist"))
 		{
-			RCLCPP_ERROR(this->get_logger(), "Failed to set preset streaming command.");
-			//throw exception
+			throw rclcpp::exceptions::InvalidEventError::runtime_error("Failed to set preset streaming command.");
 		}
 
 		else if (streaming_msg_ == "pose" && !set_preset_streaming_cmd("pose"))
 		{
-			RCLCPP_ERROR(this->get_logger(), "Failed to set preset streaming command.");
-			//throw exception
+			throw rclcpp::exceptions::InvalidEventError::runtime_error("Failed to set preset streaming command.");
 		}
 		
 		else if (streaming_msg_ == "wrench" && !set_preset_streaming_cmd("wrench"))
 		{
-			RCLCPP_ERROR(this->get_logger(), "Failed to set preset streaming command.");
-			//throw exception
+			throw rclcpp::exceptions::InvalidEventError::runtime_error("Failed to set preset streaming command.");
 		}
 
 		else if (streaming_msg_ != "twist" && streaming_msg_ != "pose" && streaming_msg_ != "wrench")
 		{
-			RCLCPP_WARN(this->get_logger(), "No valid streaming message type included."); //Using 'twist' by default.");
-			// streaming_msg_ = DEFAULT_STREAMING_MSG;
-			// if(!set_preset_streaming_cmd(DEFAULT_STREAMING_MSG))
-			// {
-			// 	RCLCPP_ERROR(this->get_logger(), "Failed to set preset streaming command.");
-			// 	//throw exception
-			// }
-
-			//throw exception!			
+			throw rclcpp::exceptions::InvalidParameterValueException("Invalid parameter type for streaming_msg. Only 'twist', 'pose' or 'wrench' are allowed.");			
 		}
 
 		if (scale_ <= 0)
 		{
-			RCLCPP_WARN(this->get_logger(), "Invalid parameter for scale. Using 0.3 by defeault.");
-			// scale_ = 0.3;
-			// parameter_callback({rclcpp::Parameter("scale", scale_)});
-
-			//throw exception!
+			throw rclcpp::exceptions::InvalidParameterValueException("Invalid parameter for scale. Only positive values are allowed.");
 		}
 }
 
@@ -244,7 +231,6 @@ SpacenavSubscriber::~SpacenavSubscriber()
 			msg_wrench->torque.z = v[5];	
 
 			// Publish message
-
 			std::lock_guard<std::mutex> lock(msg_mutex_);
 			last_msg_wrench_ = msg_wrench;
 		}
@@ -258,7 +244,10 @@ SpacenavSubscriber::~SpacenavSubscriber()
 		{
 			tf2::fromMsg(msg->pose.position, initial_position_);
 			tf2::fromMsg(msg->pose.orientation, initial_orientation_);
-			initial_pose_set_ = true;
+			if((initial_pose_set_ = true))
+			{
+				RCLCPP_INFO(this->get_logger(), "Initial pose correctly set.");
+			}
 		}	
 	}	
 
@@ -283,7 +272,7 @@ SpacenavSubscriber::~SpacenavSubscriber()
 		{
 			if (future.get()->results[0].successful)
 			{
-				RCLCPP_INFO(this->get_logger(), "Preset streaming command correctly stablished.");
+				RCLCPP_INFO(this->get_logger(), "Preset streaming command correctly stablished in external node.");
 			}
 			else
 			{
@@ -291,7 +280,7 @@ SpacenavSubscriber::~SpacenavSubscriber()
 			}
 		};
 	
-		auto result = client_param_->async_send_request(request, response_received_callback); //check return (bool)!
+		auto result = client_param_->async_send_request(request, response_received_callback); 
 
 		return result.valid();
 	}
@@ -357,8 +346,8 @@ SpacenavSubscriber::~SpacenavSubscriber()
 					else
 					{
 						result.successful = false;
-						result.reason = "Invalid parameter for streaming_msg. Only 'twist' or 'pose' are allowed.";
-						RCLCPP_ERROR(this->get_logger(),"Invalid parameter for streaming_msg. Only 'twist' or 'pose' are allowed.");
+						result.reason = "Invalid parameter type for streaming_msg. Only 'twist', 'pose' or 'wrench' are allowed.";
+						RCLCPP_ERROR(this->get_logger(), result.reason.c_str());
 					}
 				}	
 			}
@@ -374,7 +363,7 @@ SpacenavSubscriber::~SpacenavSubscriber()
 				{
 					result.successful = false;
 					result.reason = "Invalid parameter for scale. Only positive values are allowed.";
-					RCLCPP_ERROR(this->get_logger(), "Invalid parameter for scale. Only positive values are allowed.");
+					RCLCPP_ERROR(this->get_logger(), result.reason.c_str());
 				}
 			}
 		}
@@ -459,6 +448,7 @@ SpacenavSubscriber::~SpacenavSubscriber()
 			}
 		}
 	}	
+
 
 // -----------------------------------------------------------------------------
 

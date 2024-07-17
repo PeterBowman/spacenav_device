@@ -64,13 +64,19 @@ using namespace std::placeholders;
 
 		
 		// Subscribers
-		subscription_spnav_ = this->create_subscription<geometry_msgs::msg::Twist>("/spacenav/twist", 10, 
+
+		// subscription_spnav_ = this->create_subscription<geometry_msgs::msg::Twist>("/spacenav/twist", 10, 
+		// 																			std::bind(&SpacenavSubscriber::spnav_callback, 
+		// 																			this, _1));
+
+		subscription_spnav_ = this->create_subscription<sensor_msgs::msg::Joy>("/spacenav/joy", 10, 
 																					std::bind(&SpacenavSubscriber::spnav_callback, 
 																					this, _1));
-
+																					
 		subscription_state_pose_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(DEFAULT_NODE_NAME + std::string("/state/pose"), 10, 
 																					std::bind(&SpacenavSubscriber::state_callback, 
 																					this, _1));
+		
 		
 		// Timer
 		timer_ = this->create_wall_timer(std::chrono::milliseconds(20), std::bind(&SpacenavSubscriber::timer_callback, this));
@@ -79,7 +85,9 @@ using namespace std::placeholders;
 		publisher_spnav_twist_ = this->create_publisher<geometry_msgs::msg::Twist>(DEFAULT_NODE_NAME + std::string("/command/twist"), 10);
 		publisher_spnav_pose_ = this->create_publisher<geometry_msgs::msg::Pose>(DEFAULT_NODE_NAME + std::string("/command/pose"), 10);
 		publisher_spnav_wrench_ = this->create_publisher<geometry_msgs::msg::Wrench>(DEFAULT_NODE_NAME + std::string("/command/wrench"), 10);
-		
+		publisher_spnav_gripper_ = this->create_publisher<std_msgs::msg::Int32>(DEFAULT_NODE_NAME + std::string("/command/gripper"), 10);
+
+
 		// Parameters validation with exceptions to avoid runtime errors
 		if (streaming_msg_ == "twist" && !set_preset_streaming_cmd("twist"))
 		{
@@ -114,21 +122,55 @@ SpacenavSubscriber::~SpacenavSubscriber()
 
 // -----------------------Callback from SpaceNavigator----------------------------------
 
-	void SpacenavSubscriber::spnav_callback(const geometry_msgs::msg::Twist::SharedPtr msg) 
+	void SpacenavSubscriber::spnav_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
 	{
-		std::vector<double> v 
+		std::vector<float> a = msg->axes;
+		std::vector<int> b = msg->buttons;
+
+		if(b[0] == 1)
 		{
-			msg->linear.x,
-			msg->linear.y,
-			msg->linear.z,
-			msg->angular.x,
-			msg->angular.y,
-			msg->angular.z
-		};
+			if(gripper_state_ != GRIPPER_CLOSE)
+			{
+				auto msg_gripper = std::make_shared<std_msgs::msg::Int32>();
+				msg_gripper->data = GRIPPER_CLOSE;
+				publisher_spnav_gripper_->publish(*msg_gripper);
+			}
+
+			gripper_state_ = GRIPPER_CLOSE;
+		}
+		else if (b[1] == 1)
+		{
+			if(gripper_state_ != GRIPPER_OPEN)
+			{
+				auto msg_gripper = std::make_shared<std_msgs::msg::Int32>();
+				msg_gripper->data = GRIPPER_OPEN;
+				publisher_spnav_gripper_->publish(*msg_gripper);
+			}
+
+			gripper_state_ = GRIPPER_OPEN;
+		}
+		else if(gripper_state_ != GRIPPER_NONE)
+		{
+			if(gripper_state_ != GRIPPER_STOP)
+			{
+				gripper_state_ = GRIPPER_STOP;
+				auto msg_gripper = std::make_shared<std_msgs::msg::Int32>();
+				msg_gripper->data = GRIPPER_STOP;
+				publisher_spnav_gripper_->publish(*msg_gripper);
+			}
+			else
+			{
+				gripper_state_ = GRIPPER_NONE;
+			}
+		}
+		else
+		{
+			gripper_state_ = GRIPPER_NONE;
+		}
 
 		for(int i = 0; i < 6; i++)
 		{
-			v[i] *= scale_; // Improve sensibility 
+			a[i] *= scale_; // Improve sensibility 
 		}
 		
 		if (streaming_msg_ == "twist")
@@ -136,11 +178,11 @@ SpacenavSubscriber::~SpacenavSubscriber()
 			auto msg_twist = std::make_shared<geometry_msgs::msg::Twist>(); 
 			if(msg_twist )
 			{
-				msg_twist->linear.x = v[0];
-				msg_twist->linear.y = v[1];
-				msg_twist->linear.z = v[2];
-				msg_twist->angular.y = v[4];
-				msg_twist->angular.z = v[5];
+				msg_twist->linear.x = a[0];
+				msg_twist->linear.y = a[1];
+				msg_twist->linear.z = a[2];
+				msg_twist->angular.y = a[4];
+				msg_twist->angular.z = a[5];
 
 				// Publish message through timer_callback
 				std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -151,7 +193,7 @@ SpacenavSubscriber::~SpacenavSubscriber()
 				RCLCPP_ERROR(this->get_logger(), "Failed to create Twist message");  
     		}
 		} 
-		
+
 		else if (streaming_msg_ == "pose") 
 		{
 			auto current_time = now();
@@ -178,7 +220,7 @@ SpacenavSubscriber::~SpacenavSubscriber()
 
 			for (int j=0; j<6; j++)
 			{
-				msg_traslation.push_back(v[j] * dt * scale_); 
+				msg_traslation.push_back(a[j] * dt * scale_); 
 			}
 
 			tf2::Vector3 linear_translation(msg_traslation[0], msg_traslation[1], msg_traslation[2]);
@@ -223,12 +265,12 @@ SpacenavSubscriber::~SpacenavSubscriber()
 		{
 			auto msg_wrench = std::make_shared<geometry_msgs::msg::Wrench>();
 
-			msg_wrench->force.x = v[0];
-			msg_wrench->force.y = v[1];
-			msg_wrench->force.z = v[2];
-			msg_wrench->torque.x = v[3];
-			msg_wrench->torque.y = v[4];
-			msg_wrench->torque.z = v[5];	
+			msg_wrench->force.x = a[0];
+			msg_wrench->force.y = a[1];
+			msg_wrench->force.z = a[2];
+			msg_wrench->torque.x = a[3];
+			msg_wrench->torque.y = a[4];
+			msg_wrench->torque.z = a[5];	
 
 			// Publish message
 			std::lock_guard<std::mutex> lock(msg_mutex_);
@@ -374,6 +416,9 @@ SpacenavSubscriber::~SpacenavSubscriber()
 
 	void SpacenavSubscriber::timer_callback()
 	{
+
+
+
 		if (streaming_msg_ == "twist")  
 		{
 			geometry_msgs::msg::Twist::SharedPtr msg_to_publish;

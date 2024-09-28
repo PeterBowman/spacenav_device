@@ -66,12 +66,12 @@ using namespace std::placeholders;
 		// Subscribers
 
 		subscription_spnav_ = this->create_subscription<sensor_msgs::msg::Joy>("/spacenav/joy", 10, 
-																			   std::bind(&SpacenavSubscriber::spnav_callback, 
-																			   this, _1));
+											std::bind(&SpacenavSubscriber::spnav_callback, 
+											this, _1));
 																					
 		subscription_state_pose_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(DEFAULT_NODE_NAME + std::string("/state/pose"), 10, 
-												     								          std::bind(&SpacenavSubscriber::state_callback, 
-												     										  this, _1));
+												      std::bind(&SpacenavSubscriber::state_callback, 
+												      this, _1));
 		
 		
 		// Timer

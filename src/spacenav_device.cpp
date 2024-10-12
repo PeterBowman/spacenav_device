@@ -65,10 +65,6 @@ using namespace std::placeholders;
 		
 		// Subscribers
 
-		// subscription_spnav_ = this->create_subscription<geometry_msgs::msg::Twist>("/spacenav/twist", 10, 
-		// 																			std::bind(&SpacenavSubscriber::spnav_callback, 
-		// 																			this, _1));
-
 		subscription_spnav_ = this->create_subscription<sensor_msgs::msg::Joy>("/spacenav/joy", 10, 
 																					std::bind(&SpacenavSubscriber::spnav_callback, 
 																					this, _1));
@@ -416,8 +412,6 @@ SpacenavSubscriber::~SpacenavSubscriber()
 
 	void SpacenavSubscriber::timer_callback()
 	{
-
-
 
 		if (streaming_msg_ == "twist")  
 		{
